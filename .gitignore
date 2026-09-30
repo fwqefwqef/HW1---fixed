@@ -1,0 +1,18 @@
+# OS and editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local environment files (keep a shareable example if one is added)
+.env
+.env.*
+!.env.example
+
+# Reproducible images generated during local experiments
+/src/board.png
+/src/negative.png
+/src/negativeboard.png
+/src/test.png

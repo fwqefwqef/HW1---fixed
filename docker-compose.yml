@@ -1,0 +1,14 @@
+services:
+  hw1-environment:
+    build: .
+    container_name: cose451-hw1
+    volumes:
+      - ./src:/homework/src
+      - ./reports:/homework/reports
+    working_dir: /homework
+    stdin_open: true
+    tty: true
+    environment:
+      - MY_UID=${MY_UID:-1000}
+      - MY_GID=${MY_GID:-1000}
+    command: /bin/bash
