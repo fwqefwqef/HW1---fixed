@@ -1,7 +1,7 @@
 services:
   hw1-environment:
     build: .
-    container_name: cose451-hw1
+    container_name: cose451-hw1-fixed
     volumes:
       - ./src:/homework/src
       - ./reports:/homework/reports

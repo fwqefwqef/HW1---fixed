@@ -8,7 +8,7 @@
 #define ARG_SIZE 255
 
 /* Build the gray version of one pixel */
-struct pixel *gray_pixel(double luminosity) {
+struct pixel gray_pixel(double luminosity) {
   struct pixel p;
 
   /* Keep the value inside the range of a color channel */
@@ -19,7 +19,7 @@ struct pixel *gray_pixel(double luminosity) {
   }
 
   p.red = p.green = p.blue = (uint8_t)luminosity;
-  return &p;
+  return p;
 }
 
 /* This filter iterates over the image and calculates the weighted luminosity of
@@ -42,10 +42,10 @@ void filter_grayscale(struct image *img, void *weight_arr) {
       luminosity += weights[1] * image_data[i][j].green;
       luminosity += weights[2] * image_data[i][j].blue;
 
-      struct pixel *g = gray_pixel(luminosity);
-      image_data[i][j].red = g->red;
-      image_data[i][j].green = g->green;
-      image_data[i][j].blue = g->blue;
+      struct pixel g = gray_pixel(luminosity);
+      image_data[i][j].red = g.red;
+      image_data[i][j].green = g.green;
+      image_data[i][j].blue = g.blue;
       /* The alpha channel is left unchanged */
     }
   }
