@@ -219,8 +219,29 @@ char *gray_expected[] = {"test_imgs/desert_gray.png",
  *   - free every image and every pixel buffer you allocated or loaded. */
 START_TEST(gray_reference_images) {
   double weights[] = {0.299, 0.587, 0.114};
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement gray_reference_images");
+
+  struct image *img, *expected;
+  ck_assert_int_eq(load_png(gray_sources[_i], &img), 0);
+  struct image copy = duplicate_img(*img);
+
+  filter_grayscale(img, weights);
+
+  ck_assert_int_eq(load_png(gray_expected[_i], &expected), 0);
+  ck_assert_uint_eq(img->size_x, expected->size_x);
+  ck_assert_uint_eq(img->size_y, expected->size_y);
+  ck_assert_ptr_ne(img->px, NULL);
+  for (long j = 0; j < (long)img->size_x * img->size_y; j++) {
+    ck_assert_uint_eq(img->px[j].red, expected->px[j].red);
+    ck_assert_uint_eq(img->px[j].green, expected->px[j].green);
+    ck_assert_uint_eq(img->px[j].blue, expected->px[j].blue);
+    ck_assert_uint_eq(img->px[j].alpha, copy.px[j].alpha);
+  }
+
+  free(copy.px);
+  free(img->px);
+  free(img);
+  free(expected->px);
+  free(expected);
 }
 END_TEST
 
@@ -233,8 +254,43 @@ END_TEST
  * fixed random alpha, call filter_negative twice, and check the dimensions,
  * the color channels and the alpha channel after each call. */
 START_TEST(invert_roundtrip) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement invert_roundtrip");
+  srand(time(NULL) ^ getpid());
+
+  /* Random-sized image, every pixel black with one fixed random alpha */
+  struct image img = generate_rand_img();
+  uint8_t alpha = rand();
+  uint16_t sz_x = img.size_x, sz_y = img.size_y;
+  for (long i = 0; i < (long)sz_x * sz_y; i++) {
+    img.px[i].red = 0;
+    img.px[i].green = 0;
+    img.px[i].blue = 0;
+    img.px[i].alpha = alpha;
+  }
+
+  /* First inversion: black -> white */
+  filter_negative(&img, NULL);
+  ck_assert_uint_eq(img.size_x, sz_x);
+  ck_assert_uint_eq(img.size_y, sz_y);
+  ck_assert_ptr_ne(img.px, NULL);
+  for (long i = 0; i < (long)sz_x * sz_y; i++) {
+    ck_assert_uint_eq(img.px[i].red, 255);
+    ck_assert_uint_eq(img.px[i].green, 255);
+    ck_assert_uint_eq(img.px[i].blue, 255);
+    ck_assert_uint_eq(img.px[i].alpha, alpha);
+  }
+
+  /* Second inversion: white -> black */
+  filter_negative(&img, NULL);
+  ck_assert_uint_eq(img.size_x, sz_x);
+  ck_assert_uint_eq(img.size_y, sz_y);
+  for (long i = 0; i < (long)sz_x * sz_y; i++) {
+    ck_assert_uint_eq(img.px[i].red, 0);
+    ck_assert_uint_eq(img.px[i].green, 0);
+    ck_assert_uint_eq(img.px[i].blue, 0);
+    ck_assert_uint_eq(img.px[i].alpha, alpha);
+  }
+
+  free(img.px);
 }
 END_TEST
 
@@ -245,8 +301,20 @@ END_TEST
  * pixel buffer) to filter_negative and check that it returns without
  * touching the image. */
 START_TEST(invert_empty_image) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement invert_empty_image");
+  /* Valid but unused pixel buffer, 0x0 dimensions */
+  struct pixel *px = malloc(sizeof(struct pixel));
+  if (px == NULL)
+    assert(0 && "Rerun test, malloc failed");
+  struct image img = {0, 0, px};
+
+  filter_negative(&img, NULL);
+
+  /* The filter must return without touching the image */
+  ck_assert_uint_eq(img.size_x, 0);
+  ck_assert_uint_eq(img.size_y, 0);
+  ck_assert_ptr_eq(img.px, px);
+
+  free(img.px);
 }
 END_TEST
 
@@ -283,8 +351,36 @@ START_TEST(blur_small_kernel) {
   px[4] = white;
   struct image img = {3, 3, px};
 
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement blur_small_kernel");
+  /* Expected color value (identical for r/g/b) of the 9 pixels, per radius. */
+  uint8_t expected[4][9] = {
+      /* radius 0: unchanged (each square holds one pixel) */
+      {0, 0, 0, 0, 180, 0, 0, 0, 0},
+      /* radius 1: corners 45, edge-midpoints 30, centre 20 */
+      {45, 30, 45, 30, 20, 30, 45, 30, 45},
+      /* radius 2: the square always covers the whole image -> 20 everywhere */
+      {20, 20, 20, 20, 20, 20, 20, 20, 20},
+      /* radius 3: same as radius 2 */
+      {20, 20, 20, 20, 20, 20, 20, 20, 20},
+  };
+
+  for (int radius = 0; radius <= 3; radius++) {
+    /* Reset the image before each radius (filter_blur may replace img.px). */
+    for (int k = 0; k < 9; k++)
+      img.px[k] = black;
+    img.px[4] = white;
+
+    filter_blur(&img, &radius);
+
+    ck_assert_uint_eq(img.size_x, 3);
+    ck_assert_uint_eq(img.size_y, 3);
+    ck_assert_ptr_ne(img.px, NULL);
+    for (int k = 0; k < 9; k++) {
+      ck_assert_uint_eq(img.px[k].red, expected[radius][k]);
+      ck_assert_uint_eq(img.px[k].green, expected[radius][k]);
+      ck_assert_uint_eq(img.px[k].blue, expected[radius][k]);
+      ck_assert_uint_eq(img.px[k].alpha, 255);
+    }
+  }
 
   free(img.px);
 }
@@ -301,8 +397,17 @@ END_TEST
 struct image blur_radius_img;
 int blur_radii[20];
 START_TEST(blur_radius_limits) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement blur_radius_limits");
+  /* Work on a copy so other iterations see the original image. */
+  struct image copy = duplicate_img(blur_radius_img);
+  int radius = blur_radii[_i];
+
+  filter_blur(&copy, &radius);
+
+  ck_assert_uint_eq(copy.size_x, blur_radius_img.size_x);
+  ck_assert_uint_eq(copy.size_y, blur_radius_img.size_y);
+  ck_assert_ptr_ne(copy.px, NULL);
+
+  free(copy.px);
 }
 END_TEST
 
@@ -314,8 +419,27 @@ END_TEST
  * that the alpha channel now holds that value and that the three color
  * channels are unchanged. */
 START_TEST(alpha_overwrite) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement alpha_overwrite");
+  srand(time(NULL) ^ getpid());
+
+  struct image img = generate_rand_img();
+  struct image copy = duplicate_img(img);
+  uint8_t alpha = rand();
+  uint16_t sz_x = img.size_x, sz_y = img.size_y;
+
+  filter_transparency(&img, &alpha);
+
+  ck_assert_uint_eq(img.size_x, sz_x);
+  ck_assert_uint_eq(img.size_y, sz_y);
+  ck_assert_ptr_ne(img.px, NULL);
+  for (long i = 0; i < (long)sz_x * sz_y; i++) {
+    ck_assert_uint_eq(img.px[i].alpha, alpha);
+    ck_assert_uint_eq(img.px[i].red, copy.px[i].red);
+    ck_assert_uint_eq(img.px[i].green, copy.px[i].green);
+    ck_assert_uint_eq(img.px[i].blue, copy.px[i].blue);
+  }
+
+  free(img.px);
+  free(copy.px);
 }
 END_TEST
 
@@ -334,8 +458,18 @@ END_TEST
  *
  * TODO: Implement */
 START_TEST(alpha_null_argument) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement alpha_null_argument");
+  /* At least one pixel, so the filter does not return early before it
+   * dereferences the (NULL) argument. */
+  struct pixel *px = malloc(sizeof(struct pixel));
+  if (px == NULL)
+    assert(0 && "Rerun test, malloc failed");
+  struct image img = {1, 1, px};
+
+  /* Expected to die with SIGSEGV (registered via tcase_add_test_raise_signal)
+   */
+  filter_transparency(&img, NULL);
+
+  free(img.px);
 }
 END_TEST
 
@@ -356,8 +490,27 @@ char *sharpen_expected[] = {"test_imgs/desert_sharpen.png",
  * dimensions, the three color channels against the reference image and the
  * alpha channel against the copy. Free everything you allocated or loaded. */
 START_TEST(sharpen_reference_images) {
-  /* TODO: Implement */
-  ck_assert(0 && "TODO: implement sharpen_reference_images");
+  struct image *img, *img_sharp, img_dup;
+
+  ck_assert_int_eq(load_png(sharpen_sources[_i], &img), 0);
+  img_dup = duplicate_img(*img);
+  filter_sharpen(img, NULL);
+
+  ck_assert_int_eq(load_png(sharpen_expected[_i], &img_sharp), 0);
+  ck_assert_uint_eq(img_sharp->size_x, img->size_x);
+  ck_assert_uint_eq(img_sharp->size_y, img->size_y);
+  ck_assert_ptr_ne(img->px, NULL);
+  for (long j = 0; j < (long)img->size_x * img->size_y; j++) {
+    ck_assert_uint_eq(img_sharp->px[j].red, img->px[j].red);
+    ck_assert_uint_eq(img_sharp->px[j].green, img->px[j].green);
+    ck_assert_uint_eq(img_sharp->px[j].blue, img->px[j].blue);
+    ck_assert_uint_eq(img_dup.px[j].alpha, img->px[j].alpha);
+  }
+  free(img_dup.px);
+  free(img_sharp->px);
+  free(img->px);
+  free(img_sharp);
+  free(img);
 }
 END_TEST
 
@@ -388,8 +541,13 @@ int main() {
    *   w, h, w - 1, h - 1, w + 1, h + 1, w / 2, h / 2, 2 * w, 2 * h, -w
    * Careful: INT_MAX + 1 and INT_MIN - 1 are signed overflow, which is
    * undefined behaviour, so they are not in the list. */
-  int tmp[20] = {0};
-  memcpy(blur_radii, tmp, sizeof(blur_radii));
+  int w = blur_radius_img.size_x;
+  int h = blur_radius_img.size_y;
+  int radii[20] = {INT_MIN, INT_MIN + 1, INT_MIN / 2, -1,      0,
+                   1,       INT_MAX - 1, INT_MAX / 2, INT_MAX, w,
+                   h,       w - 1,       h - 1,       w + 1,   h + 1,
+                   w / 2,   h / 2,       2 * w,       2 * h,   -w};
+  memcpy(blur_radii, radii, sizeof(blur_radii));
   tcase_add_loop_test(tc1, blur_radius_limits, 0,
                       sizeof(blur_radii) / sizeof(blur_radii[0]));
 

@@ -176,6 +176,39 @@ void filter_sharpen(struct image *img, void *unused) {
   (void)img;
   (void)unused;
   /* TODO: Implement */
+  if (img->size_x == 0 || img->size_y == 0) {
+    return;
+  }
+
+  size_t pixel_count = (size_t)img->size_x * img->size_y;
+  struct pixel(*src)[img->size_x] = (struct pixel(*)[img->size_x])img->px;
+  struct pixel(*dst)[img->size_x] = malloc(pixel_count * sizeof(struct pixel));
+  if (dst == NULL) {
+    return;
+  }
+
+  for (long y = 0; y < img->size_y; y++) {
+    long up = (y > 0) ? y - 1 : 0;
+    long down = (y + 1 < img->size_y) ? y + 1 : y;
+    for (long x = 0; x < img->size_x; x++) {
+      long left = (x > 0) ? x - 1 : 0;
+      long right = (x + 1 < img->size_x) ? x + 1 : x;
+
+      int r = 5 * src[y][x].red - src[up][x].red - src[down][x].red -
+              src[y][left].red - src[y][right].red;
+      int g = 5 * src[y][x].green - src[up][x].green - src[down][x].green -
+              src[y][left].green - src[y][right].green;
+      int b = 5 * src[y][x].blue - src[up][x].blue - src[down][x].blue -
+              src[y][left].blue - src[y][right].blue;
+
+      dst[y][x].red = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+      dst[y][x].green = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+      dst[y][x].blue = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+      dst[y][x].alpha = src[y][x].alpha;
+    }
+  }
+  memcpy(img->px, dst, pixel_count * sizeof(struct pixel));
+  free(dst);
 }
 
 /* The filter structure comprises the filter function, its arguments and the
