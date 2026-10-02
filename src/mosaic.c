@@ -8,7 +8,7 @@
  * use the pixels that fall inside the image. */
 struct pixel average_block(int w, int h, struct pixel (*data)[w], int bx,
                            int by, int block) {
-  uint8_t sum_r = 0, sum_g = 0, sum_b = 0, sum_a = 0;
+  long sum_r = 0, sum_g = 0, sum_b = 0, sum_a = 0;
   int count = 0;
   for (int dy = 0; dy < block && by + dy < h; dy++) {
     for (int dx = 0; dx < block && bx + dx < w; dx++) {
@@ -49,10 +49,23 @@ int main(int argc, char *argv[]) {
 
   /* Memory allocation and error handling */
   img_out = malloc(sizeof(struct image));
+  if (!img_out) {
+    free(img->px);
+    free(img);
+    printf("Couldn't allocate memory\n");
+    return 1;
+  }
   img_out->size_x = img->size_x;
   img_out->size_y = img->size_y;
   img_out->px =
       malloc((size_t)img->size_x * img->size_y * sizeof(struct pixel));
+  if (!img_out->px) {
+    free(img_out);
+    free(img->px);
+    free(img);
+    printf("Couldn't allocate memory\n");
+    return 1;
+  }
 
   if (img->size_x > 0 && img->size_y > 0) {
     /* Cast both pixel arrays into 2D arrays */
@@ -67,7 +80,8 @@ int main(int argc, char *argv[]) {
             average_block(img->size_x, img->size_y, data, bx, by, block);
         for (int dy = 0; dy < block; dy++) {
           for (int dx = 0; dx < block; dx++) {
-            dst[by + dy][bx + dx] = avg;
+            if (by + dy < img->size_y && bx + dx < img->size_x)
+              dst[by + dy][bx + dx] = avg;
           }
         }
       }

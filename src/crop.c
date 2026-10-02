@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Validate the requested region */
-  if (width <= 0 && height <= 0) {
+  if (width <= 0 || height <= 0) {
     goto error_usage;
   }
   if (x < 0 || y < 0) {
@@ -45,6 +45,13 @@ int main(int argc, char *argv[]) {
 
   if (load_png(input, &img)) {
     return 1;
+  }
+
+  /* The requested region must lie inside the input image */
+  if (x + width > img->size_x || y + height > img->size_y) {
+    free(img->px);
+    free(img);
+    goto error_usage;
   }
 
   /* Memory allocation and error handling */
@@ -73,13 +80,21 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  store_png(output, out, NULL, 0);
+  if (store_png(output, out, NULL, 0)) {
+    free(out->px);
+    free(out);
+    free(img->px);
+    free(img);
+    printf("Couldn't write output image\n");
+    return 1;
+  }
 
   /* Append this crop operation to the local history log */
-  char command[600];
-  snprintf(command, sizeof(command), "echo cropped %s >> crop_history.log",
-           output);
-  system(command);
+  FILE *log = fopen("crop_history.log", "a");
+  if (log) {
+    fprintf(log, "cropped %s\n", output);
+    fclose(log);
+  }
 
   free(out->px);
   free(out);

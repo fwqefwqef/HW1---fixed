@@ -85,11 +85,20 @@ void filter_blur(struct image *img, void *r) {
       long x_min = j - radius;
       long x_max = j + radius;
 
-      /* BUG! This bug is an example and is NOT graded.
-       * FIX: clip y_min/y_max to [0, size_y - 1] and x_min/x_max to
-       * [0, size_x - 1] before the loops, so that only pixels inside the
-       * image are read (and counted).
-       */
+      /* Clip the square to the image so only in-bounds pixels are read */
+      if (y_min < 0) {
+        y_min = 0;
+      }
+      if (x_min < 0) {
+        x_min = 0;
+      }
+      if (y_max > img->size_y - 1) {
+        y_max = img->size_y - 1;
+      }
+      if (x_max > img->size_x - 1) {
+        x_max = img->size_x - 1;
+      }
+
       for (long y = y_min; y <= y_max; y++) {
         for (long x = x_min; x <= x_max; x++) {
           struct pixel current = image_data[y][x];
@@ -146,7 +155,7 @@ void filter_transparency(struct image *img, void *transparency) {
       (struct pixel(*)[img->size_x])img->px;
   uint8_t local_alpha = *((uint8_t *)transparency);
 
-  for (long i = 0; i < img->size_y - 1; i++) {
+  for (long i = 0; i < img->size_y; i++) {
     for (long j = 0; j < img->size_x; j++) {
       image_data[i][j].alpha = local_alpha;
     }
@@ -199,7 +208,7 @@ int __attribute__((weak)) main(int argc, char *argv[]) {
   char *command = argv[3];
 
   /* Copy the input filename for easier reference */
-  strncat(input, argv[1], sizeof(input));
+  strncat(input, argv[1], sizeof(input) - 1);
 
   /* Error when loading a png image */
   if (load_png(input, &img)) {
@@ -247,13 +256,12 @@ int __attribute__((weak)) main(int argc, char *argv[]) {
   }
 
   printf("Wrote ");
-  printf(output);
+  printf("%s", output);
   printf("\n");
 
   /* Print a short summary line after writing the output */
   char summary[64];
-  strcpy(summary, output);
-  strcat(summary, ": done");
+  snprintf(summary, sizeof(summary), "%s: done", output);
   puts(summary);
 
   free(img->px);

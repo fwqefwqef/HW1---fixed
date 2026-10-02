@@ -38,6 +38,9 @@ int main(int argc, char *argv[]) {
   }
   strcpy(final_name, argv[1]);
   if (!strstr(final_name, ".png")) {
+    if (strlen(final_name) + 4 >= sizeof(final_name)) {
+      goto error;
+    }
     strcat(final_name, ".png");
   }
   const char *output_name = final_name;

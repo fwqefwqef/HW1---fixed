@@ -21,11 +21,11 @@ int main(int argc, char *argv[]) {
   /* Parse the points. Invalid input will just set the coordinate to 0.
    * The program will still work.
    */
-  unsigned char top_left_x = atoi(argv[3]);
-  unsigned char top_left_y = atoi(argv[4]);
+  int top_left_x = atoi(argv[3]);
+  int top_left_y = atoi(argv[4]);
 
-  unsigned char bottom_right_x = atoi(argv[5]);
-  unsigned char bottom_right_y = atoi(argv[6]);
+  int bottom_right_x = atoi(argv[5]);
+  int bottom_right_y = atoi(argv[6]);
 
   /* Invalid color code will set the color to black.
    * If it worked for Henry Ford, it will work for us.
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   if (width > 0 && height > 0) {
     struct pixel(*image_data)[width] = (struct pixel(*)[width])img->px;
 
-    for (int i = 1; i < height; i++) {
+    for (int i = 0; i < height; i++) {
       for (int j = 0; j < width; j++) {
         // Check if the pixel is in the rectangle
         if (i >= top_left_y && i <= bottom_right_y && j >= top_left_x &&

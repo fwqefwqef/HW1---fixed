@@ -74,11 +74,11 @@ int main(int argc, char *argv[]) {
     goto error_store;
   }
 
-  free(img->px);
-  free(img);
-
   printf("Resized %ux%u -> %ux%u\n", img->size_x, img->size_y, new_img->size_x,
          new_img->size_y);
+
+  free(img->px);
+  free(img);
 
   free(new_img->px);
   free(new_img);

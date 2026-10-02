@@ -88,9 +88,8 @@ int main(int argc, char *argv[]) {
     struct pixel(*image_data)[width] = (struct pixel(*)[width])img->px;
 
     /* We segment the image into squares and fill each square with its color */
-    for (int i = 0; i < (img->size_y + square_width - 1) / square_width; i++) {
-      for (int j = 0; j < (img->size_x + square_width - 1) / square_width;
-           j++) {
+    for (int i = 0; i < (img->size_y - 1) / square_width + 1; i++) {
+      for (int j = 0; j < (img->size_x - 1) / square_width + 1; j++) {
 
         /* Calculate the color based on the square index */
         int color = (i + j) % 2;
@@ -121,7 +120,6 @@ int main(int argc, char *argv[]) {
   int ret = 0;
   if (store_png(output_name, img, palette, 2)) {
     printf("Couldn't write output image\n");
-    free(img->px);
     ret = 1;
   }
 

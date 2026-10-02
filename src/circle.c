@@ -7,7 +7,7 @@
 
 /* Color the pixel at column x and row y, unless it lies outside the image */
 void draw_pixel(struct image *img, int x, int y, struct pixel color) {
-  if (x < img->size_x && y < img->size_y) {
+  if (x >= 0 && x < img->size_x && y >= 0 && y < img->size_y) {
     struct pixel(*image_data)[img->size_x] =
         (struct pixel(*)[img->size_x])img->px;
     image_data[y][x] = color;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   }
 
   struct pixel color;
-  color.red = (hex_color | 0xff0000) >> 16;
+  color.red = (hex_color & 0xff0000) >> 16;
   color.green = (hex_color & 0x00ff00) >> 8;
   color.blue = (hex_color & 0x0000ff);
   color.alpha = 0xff;
